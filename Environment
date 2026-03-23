@@ -1,0 +1,13 @@
+# ─── Environment Variables ─────────────────────────────────
+
+# OneChain RPC URL (testnet or devnet)
+NEXT_PUBLIC_ONECHAIN_RPC_URL=https://rpc.testnet.onechain.fun
+
+# Deployed Move package ID (after `sui client publish`)
+NEXT_PUBLIC_PACKAGE_ID=0xYOUR_PACKAGE_ID
+
+# Shared Registry object ID (created during init)
+NEXT_PUBLIC_REGISTRY_ID=0xYOUR_REGISTRY_OBJECT_ID
+
+# Pinata IPFS JWT (from https://app.pinata.cloud)
+PINATA_JWT=
