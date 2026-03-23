@@ -7,11 +7,10 @@ import { ThemeProvider } from "@/app/theme-provider";
 
 const queryClient = new QueryClient();
 
-// OneChain network configuration
-// Replace with OneChain's actual RPC URL when available
+// Network configuration — using Sui testnet
 const networks = {
-  onechain: {
-    url: process.env.NEXT_PUBLIC_ONECHAIN_RPC_URL || "https://rpc.testnet.onechain.fun",
+  testnet: {
+    url: process.env.NEXT_PUBLIC_ONECHAIN_RPC_URL || getFullnodeUrl("testnet"),
   },
 };
 
@@ -19,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
-        <SuiClientProvider networks={networks} defaultNetwork="onechain">
+        <SuiClientProvider networks={networks} defaultNetwork="testnet">
           <WalletProvider autoConnect>
             {children}
           </WalletProvider>
