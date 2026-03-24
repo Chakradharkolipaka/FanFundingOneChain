@@ -1,13 +1,13 @@
 /// Pay-Per-View module for FanFunding on OneChain.
 /// Allows fans to pay to watch video NFTs and receive a ViewTicket as proof.
 module fan_funding::pay_per_view {
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
-    use sui::coin::{Self, Coin};
-    use sui::sui::SUI;
-    use sui::event;
-    use sui::clock::{Self, Clock};
+    use one::object::{Self, UID};
+    use one::transfer;
+    use one::tx_context::{Self, TxContext};
+    use one::coin::{Self, Coin};
+    use one::oct::OCT;
+    use one::event;
+    use one::clock::{Self, Clock};
     use std::string::{Self, String};
 
     use fan_funding::nft_donation::FanNFT;
@@ -20,7 +20,7 @@ module fan_funding::pay_per_view {
     // ─── Objects ─────────────────────────────────────────────
 
     /// Proof that a viewer has paid to watch a video NFT
-    struct ViewTicket has key, store {
+    public struct ViewTicket has key, store {
         id: UID,
         token_id: u64,
         viewer: address,
@@ -30,7 +30,7 @@ module fan_funding::pay_per_view {
 
     // ─── Events ──────────────────────────────────────────────
 
-    struct ViewPurchased has copy, drop {
+    public struct ViewPurchased has copy, drop {
         token_id: u64,
         viewer: address,
         amount: u64,
@@ -43,7 +43,7 @@ module fan_funding::pay_per_view {
     /// A ViewTicket is transferred to the viewer as proof of purchase.
     public entry fun pay_to_watch(
         nft: &mut FanNFT,
-        payment: Coin<SUI>,
+        payment: Coin<OCT>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {

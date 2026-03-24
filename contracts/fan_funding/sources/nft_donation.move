@@ -1,13 +1,13 @@
 /// NFT Donation module for FanFunding on OneChain.
 /// Allows creators to mint NFTs (image or video) and fans to donate OCT.
 module fan_funding::nft_donation {
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
-    use sui::coin::{Self, Coin};
-    use sui::sui::SUI;
-    use sui::event;
-    use sui::balance::{Self, Balance};
+    use one::object::{Self, UID};
+    use one::transfer;
+    use one::tx_context::{Self, TxContext};
+    use one::coin::{Self, Coin};
+    use one::oct::OCT;
+    use one::event;
+    use one::balance::{Self, Balance};
     use std::string::{Self, String};
 
     // ─── Errors ──────────────────────────────────────────────
@@ -18,14 +18,14 @@ module fan_funding::nft_donation {
     // ─── Objects ─────────────────────────────────────────────
 
     /// Shared registry that tracks all minted NFTs
-    struct Registry has key {
+    public struct Registry has key {
         id: UID,
         total_nfts: u64,
         total_donations: u64,
     }
 
     /// An NFT representing a creator's content (image or video)
-    struct FanNFT has key, store {
+    public struct FanNFT has key, store {
         id: UID,
         token_id: u64,
         name: String,
@@ -36,12 +36,12 @@ module fan_funding::nft_donation {
         /// For video NFTs, the price (in MIST) to unlock; 0 for free / image
         watch_price: u64,
         creator: address,
-        total_donated: Balance<SUI>,
+        total_donated: Balance<OCT>,
     }
 
     // ─── Events ──────────────────────────────────────────────
 
-    struct NFTMinted has copy, drop {
+    public struct NFTMinted has copy, drop {
         token_id: u64,
         creator: address,
         name: String,
@@ -49,13 +49,13 @@ module fan_funding::nft_donation {
         media_type: String,
     }
 
-    struct DonationReceived has copy, drop {
+    public struct DonationReceived has copy, drop {
         token_id: u64,
         donor: address,
         amount: u64,
     }
 
-    struct FundsWithdrawn has copy, drop {
+    public struct FundsWithdrawn has copy, drop {
         token_id: u64,
         creator: address,
         amount: u64,
@@ -95,7 +95,7 @@ module fan_funding::nft_donation {
             media_type: string::utf8(b"image"),
             watch_price: 0,
             creator: sender,
-            total_donated: balance::zero<SUI>(),
+            total_donated: balance::zero<OCT>(),
         };
 
         event::emit(NFTMinted {
@@ -131,7 +131,7 @@ module fan_funding::nft_donation {
             media_type: string::utf8(b"video"),
             watch_price,
             creator: sender,
-            total_donated: balance::zero<SUI>(),
+            total_donated: balance::zero<OCT>(),
         };
 
         event::emit(NFTMinted {
@@ -145,11 +145,11 @@ module fan_funding::nft_donation {
         transfer::share_object(nft);
     }
 
-    /// Donate OCT (SUI) to a specific NFT
+    /// Donate OCT to a specific NFT
     public entry fun donate(
         registry: &mut Registry,
         nft: &mut FanNFT,
-        payment: Coin<SUI>,
+        payment: Coin<OCT>,
         _ctx: &mut TxContext,
     ) {
         let amount = coin::value(&payment);
