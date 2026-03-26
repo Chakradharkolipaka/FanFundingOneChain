@@ -63,14 +63,7 @@ export default function HomePage() {
       try {
         setLoading(true);
 
-        // Fetch all FanNFT objects owned by the package (shared objects)
-        const objects = await client.getOwnedObjects({
-          owner: PACKAGE_ID,
-          options: { showContent: true, showType: true },
-        });
-
-        // Also query dynamic fields or use queryEvents to find NFTs
-        // For shared objects, we query events instead
+        // Query NFTMinted events to discover all minted NFTs
         const events = await client.queryEvents({
           query: {
             MoveEventType: `${PACKAGE_ID}::nft_donation::NFTMinted`,
@@ -82,50 +75,70 @@ export default function HomePage() {
         const nftList: NFTData[] = [];
         let totalDonated = 0;
 
-        for (const event of events.data) {
-          const parsed = event.parsedJson as any;
-          if (!parsed) continue;
+        // Process events in parallel for speed
+        const results = await Promise.allSettled(
+          events.data.map(async (event) => {
+            const parsed = event.parsedJson as any;
+            if (!parsed) return null;
 
-          // Try to fetch the actual NFT object to get current donation total
-          try {
-            // We need to find the object ID from the event's transaction
-            const tx = await client.getTransactionBlock({
-              digest: event.id.txDigest,
-              options: { showEffects: true, showObjectChanges: true },
-            });
+            try {
+              // Get object ID from the transaction that created the NFT
+              const txData = await client.getTransactionBlock({
+                digest: event.id.txDigest,
+                options: { showObjectChanges: true },
+              });
 
-            const created = tx.objectChanges?.find(
-              (c: any) =>
-                c.type === "created" &&
-                c.objectType?.includes("FanNFT")
-            ) as any;
+              const created = txData.objectChanges?.find(
+                (c: any) =>
+                  c.type === "created" &&
+                  c.objectType?.includes("FanNFT")
+              ) as any;
 
-            if (created) {
+              if (!created) return null;
+
+              // Fetch the NFT object for current state (donation total etc.)
               const nftObj = await client.getObject({
                 id: created.objectId,
                 options: { showContent: true },
               });
 
-              const fields = (nftObj.data?.content as any)?.fields;
-              if (fields) {
-                const donated = Number(fields.total_donated) || 0;
-                totalDonated += donated;
+              if (!nftObj.data?.content) return null;
 
-                nftList.push({
-                  objectId: created.objectId,
-                  tokenId: Number(fields.token_id),
-                  name: fields.name,
-                  description: fields.description,
-                  tokenUri: fields.token_uri,
-                  mediaType: fields.media_type,
-                  watchPrice: Number(fields.watch_price) || 0,
-                  creator: fields.creator,
-                  totalDonated: donated,
-                });
+              const fields = (nftObj.data.content as any)?.fields;
+              if (!fields) return null;
+
+              // total_donated is Balance<OCT> — serialized as string or nested {value: string}
+              let donated = 0;
+              if (typeof fields.total_donated === "string") {
+                donated = Number(fields.total_donated) || 0;
+              } else if (fields.total_donated?.fields?.value) {
+                donated = Number(fields.total_donated.fields.value) || 0;
+              } else if (typeof fields.total_donated === "number") {
+                donated = fields.total_donated;
               }
+
+              return {
+                objectId: created.objectId,
+                tokenId: Number(fields.token_id),
+                name: fields.name,
+                description: fields.description,
+                tokenUri: fields.token_uri,
+                mediaType: fields.media_type,
+                watchPrice: Number(fields.watch_price) || 0,
+                creator: fields.creator,
+                totalDonated: donated,
+              } as NFTData;
+            } catch (err) {
+              console.warn("Failed to fetch NFT from event:", err);
+              return null;
             }
-          } catch (err) {
-            console.warn("Failed to fetch NFT object:", err);
+          })
+        );
+
+        for (const result of results) {
+          if (result.status === "fulfilled" && result.value) {
+            nftList.push(result.value);
+            totalDonated += result.value.totalDonated;
           }
         }
 

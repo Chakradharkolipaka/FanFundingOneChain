@@ -107,6 +107,7 @@ export default function MintPage() {
       // Step 2: Mint on-chain
       setMinting(true);
       const tx = new Transaction();
+      const encoder = new TextEncoder();
 
       if (mediaType === "video") {
         const priceInMist = Math.floor(parseFloat(watchPrice || "0") * 1e9);
@@ -114,9 +115,9 @@ export default function MintPage() {
           target: `${PACKAGE_ID}::nft_donation::mint_video_nft`,
           arguments: [
             tx.object(REGISTRY_ID),
-            tx.pure.string(name),
-            tx.pure.string(description),
-            tx.pure.string(metadataUrl),
+            tx.pure.vector("u8", Array.from(encoder.encode(name))),
+            tx.pure.vector("u8", Array.from(encoder.encode(description))),
+            tx.pure.vector("u8", Array.from(encoder.encode(metadataUrl))),
             tx.pure.u64(priceInMist),
           ],
         });
@@ -125,9 +126,9 @@ export default function MintPage() {
           target: `${PACKAGE_ID}::nft_donation::mint_nft`,
           arguments: [
             tx.object(REGISTRY_ID),
-            tx.pure.string(name),
-            tx.pure.string(description),
-            tx.pure.string(metadataUrl),
+            tx.pure.vector("u8", Array.from(encoder.encode(name))),
+            tx.pure.vector("u8", Array.from(encoder.encode(description))),
+            tx.pure.vector("u8", Array.from(encoder.encode(metadataUrl))),
           ],
         });
       }
