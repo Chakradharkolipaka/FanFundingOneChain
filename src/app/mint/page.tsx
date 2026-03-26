@@ -84,8 +84,21 @@ export default function MintPage() {
       });
 
       if (!uploadRes.ok) {
-        const err = await uploadRes.json();
-        throw new Error(err.error || "Upload failed");
+        let errorMsg = `Upload failed (${uploadRes.status})`;
+        try {
+          const text = await uploadRes.text();
+          // Try parsing as JSON first
+          try {
+            const errJson = JSON.parse(text);
+            errorMsg = errJson.error || errorMsg;
+          } catch {
+            // Not JSON — use raw text (e.g. "Request Entity Too Large")
+            errorMsg = text || errorMsg;
+          }
+        } catch {
+          // ignore
+        }
+        throw new Error(errorMsg);
       }
 
       const { metadataUrl } = await uploadRes.json();
