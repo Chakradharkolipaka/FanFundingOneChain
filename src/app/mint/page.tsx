@@ -151,9 +151,18 @@ export default function MintPage() {
       setMediaType("image");
     } catch (err: any) {
       console.error("Mint failed:", err);
+      const msg = err?.message || String(err) || "Something went wrong";
+      let userMsg = msg;
+      if (msg.includes("Rejected") || msg.includes("rejected")) {
+        userMsg = "Transaction was rejected in your wallet.";
+      } else if (msg.includes("No valid gas")) {
+        userMsg = "Insufficient OCT for gas. Please get testnet tokens from the faucet.";
+      } else if (msg.includes("InsufficientGas") || msg.includes("insufficient")) {
+        userMsg = "Not enough OCT to cover gas fees. Request more from the faucet.";
+      }
       toast({
         title: "Mint failed",
-        description: err.message || "Something went wrong",
+        description: userMsg,
         variant: "destructive",
       });
     } finally {

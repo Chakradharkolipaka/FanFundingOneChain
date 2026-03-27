@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSuiClient, useCurrentAccount, useCurrentWallet } from "@mysten/dapp-kit";
+import { useSuiClient, useCurrentAccount } from "@mysten/dapp-kit";
 import NFTCard from "@/components/NFTCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import { PACKAGE_ID, REGISTRY_ID } from "@/constants";
@@ -35,28 +35,10 @@ function resolveIpfsUrl(uri: string): string {
 export default function HomePage() {
   const client = useSuiClient();
   const account = useCurrentAccount();
-  const { currentWallet, connectionStatus } = useCurrentWallet();
   const [nfts, setNfts] = useState<NFTData[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalDonations, setTotalDonations] = useState(0);
   const [totalNFTs, setTotalNFTs] = useState(0);
-  const [wrongNetwork, setWrongNetwork] = useState(false);
-
-  // Check if connected wallet is on OneChain testnet (chain: 1bd5c965)
-  useEffect(() => {
-    if (connectionStatus !== "connected" || !currentWallet) {
-      setWrongNetwork(false);
-      return;
-    }
-    // dapp-kit exposes the chain the wallet is currently on
-    const chain = (currentWallet as any)?.chains?.[0] || "";
-    // OneChain testnet chain id is "1bd5c965", dapp-kit formats as "onechain:1bd5c965"
-    if (chain && !chain.includes("1bd5c965")) {
-      setWrongNetwork(true);
-    } else {
-      setWrongNetwork(false);
-    }
-  }, [currentWallet, connectionStatus]);
 
   useEffect(() => {
     async function fetchNFTs() {
@@ -158,20 +140,19 @@ export default function HomePage() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
 
-      {/* Wrong network warning */}
-      {wrongNetwork && (
-        <div className="rounded-lg border border-yellow-500 bg-yellow-500/10 p-4 text-yellow-500 text-sm flex items-start gap-3">
-          <span className="text-xl">⚠️</span>
+      {/* Connection hint when wallet not connected */}
+      {!account && (
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-blue-400 text-sm flex items-start gap-3">
+          <span className="text-xl">💡</span>
           <div>
-            <p className="font-semibold">Wrong Network Detected</p>
+            <p className="font-semibold">Connect Your One Wallet</p>
             <p className="mt-1">
-              Your One Wallet is not connected to <strong>OneChain Testnet</strong>.
-              Please open One Wallet → Settings → Network → select <strong>Testnet</strong>.
-              The RPC URL is: <code className="bg-yellow-500/20 px-1 rounded">https://rpc-testnet.onelabs.cc:443</code>
+              Click <strong>&quot;Connect Wallet&quot;</strong> in the top right corner. Make sure <strong>Developer Mode</strong> is enabled in your One Wallet extension.
             </p>
           </div>
         </div>
       )}
+
       <div className="text-center space-y-2">
         <h1 className="text-3xl md:text-4xl font-bold">
           🎨 Fan Funding on <span className="text-primary">OneChain</span>

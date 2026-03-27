@@ -116,9 +116,16 @@ export default function NFTCard({
       setDialogOpen(false);
     } catch (err: any) {
       console.error("Donate failed:", err);
+      const msg = err?.message || String(err) || "Something went wrong";
+      let userMsg = msg;
+      if (msg.includes("Rejected") || msg.includes("rejected")) {
+        userMsg = "Transaction was rejected in your wallet.";
+      } else if (msg.includes("insufficient") || msg.includes("InsufficientGas") || msg.includes("No valid gas")) {
+        userMsg = "Not enough OCT. Get testnet tokens from the faucet.";
+      }
       toast({
         title: "Donation failed",
-        description: err.message || "Something went wrong",
+        description: userMsg,
         variant: "destructive",
       });
     } finally {
@@ -156,9 +163,16 @@ export default function NFTCard({
       });
     } catch (err: any) {
       console.error("Pay to watch failed:", err);
+      const msg = err?.message || String(err) || "Something went wrong";
+      let userMsg = msg;
+      if (msg.includes("Rejected") || msg.includes("rejected")) {
+        userMsg = "Transaction was rejected in your wallet.";
+      } else if (msg.includes("insufficient") || msg.includes("InsufficientGas") || msg.includes("No valid gas")) {
+        userMsg = "Not enough OCT. Get testnet tokens from the faucet.";
+      }
       toast({
         title: "Payment failed",
-        description: err.message || "Something went wrong",
+        description: userMsg,
         variant: "destructive",
       });
     } finally {

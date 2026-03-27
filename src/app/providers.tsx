@@ -6,16 +6,10 @@ import { ThemeProvider } from "@/app/theme-provider";
 
 const queryClient = new QueryClient();
 
-// OneChain testnet — chain ID: 1bd5c965
-// One Wallet connects to this chain by its RPC URL
+// OneChain testnet RPC — the app reads all on-chain data from here
 const ONECHAIN_RPC = process.env.NEXT_PUBLIC_ONECHAIN_RPC_URL || "https://rpc-testnet.onelabs.cc:443";
 
 const { networkConfig } = createNetworkConfig({
-  // Key must match what One Wallet reports as its network
-  "onechain-testnet": {
-    url: ONECHAIN_RPC,
-  },
-  // Keep "testnet" alias so app internals still work
   testnet: {
     url: ONECHAIN_RPC,
   },
