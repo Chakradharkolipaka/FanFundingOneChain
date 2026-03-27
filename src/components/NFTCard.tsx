@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ export default function NFTCard({
 }: NFTCardProps) {
   const account = useCurrentAccount();
   const client = useSuiClient();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signTx } = useSignTransaction();
   const { toast } = useToast();
 
   const [donateAmount, setDonateAmount] = useState("");
@@ -101,8 +101,14 @@ export default function NFTCard({
         ],
       });
 
-      const result = await signAndExecute({
+      const { bytes, signature } = await signTx({
         transaction: tx,
+      });
+
+      const result = await client.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: { showEffects: true },
       });
 
       toast({
@@ -153,8 +159,14 @@ export default function NFTCard({
         ],
       });
 
-      const result = await signAndExecute({
+      const { bytes, signature } = await signTx({
         transaction: tx,
+      });
+
+      const result = await client.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: { showEffects: true },
       });
 
       toast({

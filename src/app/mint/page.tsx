@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { PACKAGE_ID, REGISTRY_ID } from "@/constants";
 export default function MintPage() {
   const account = useCurrentAccount();
   const client = useSuiClient();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signTx } = useSignTransaction();
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -133,8 +133,14 @@ export default function MintPage() {
         });
       }
 
-      const result = await signAndExecute({
+      const { bytes, signature } = await signTx({
         transaction: tx,
+      });
+
+      const result = await client.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: { showEffects: true },
       });
 
       toast({
