@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { Transaction } from "@mysten/sui/transactions";
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@onelabs/dapp-kit";
+import { Transaction } from "@onelabs/sui/transactions";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,7 @@ export default function NFTCard({
 }: NFTCardProps) {
   const account = useCurrentAccount();
   const client = useSuiClient();
-  const { mutateAsync: signTx } = useSignTransaction();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const { toast } = useToast();
 
   const [donateAmount, setDonateAmount] = useState("");
@@ -101,14 +101,8 @@ export default function NFTCard({
         ],
       });
 
-      const { bytes, signature } = await signTx({
+      const result = await signAndExecute({
         transaction: tx,
-      });
-
-      const result = await client.executeTransactionBlock({
-        transactionBlock: bytes,
-        signature,
-        options: { showEffects: true },
       });
 
       toast({
@@ -159,14 +153,8 @@ export default function NFTCard({
         ],
       });
 
-      const { bytes, signature } = await signTx({
+      const result = await signAndExecute({
         transaction: tx,
-      });
-
-      const result = await client.executeTransactionBlock({
-        transactionBlock: bytes,
-        signature,
-        options: { showEffects: true },
       });
 
       toast({

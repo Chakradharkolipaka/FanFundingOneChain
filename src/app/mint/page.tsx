@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { Transaction } from "@mysten/sui/transactions";
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@onelabs/dapp-kit";
+import { Transaction } from "@onelabs/sui/transactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +14,7 @@ import { PACKAGE_ID, REGISTRY_ID } from "@/constants";
 export default function MintPage() {
   const account = useCurrentAccount();
   const client = useSuiClient();
-  const { mutateAsync: signTx } = useSignTransaction();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -107,7 +107,6 @@ export default function MintPage() {
       // Step 2: Mint on-chain
       setMinting(true);
       const tx = new Transaction();
-      const encoder = new TextEncoder();
 
       if (mediaType === "video") {
         const priceInMist = Math.floor(parseFloat(watchPrice || "0") * 1e9);
@@ -115,9 +114,9 @@ export default function MintPage() {
           target: `${PACKAGE_ID}::nft_donation::mint_video_nft`,
           arguments: [
             tx.object(REGISTRY_ID),
-            tx.pure.vector("u8", Array.from(encoder.encode(name))),
-            tx.pure.vector("u8", Array.from(encoder.encode(description))),
-            tx.pure.vector("u8", Array.from(encoder.encode(metadataUrl))),
+            tx.pure.string(name),
+            tx.pure.string(description),
+            tx.pure.string(metadataUrl),
             tx.pure.u64(priceInMist),
           ],
         });
@@ -126,21 +125,15 @@ export default function MintPage() {
           target: `${PACKAGE_ID}::nft_donation::mint_nft`,
           arguments: [
             tx.object(REGISTRY_ID),
-            tx.pure.vector("u8", Array.from(encoder.encode(name))),
-            tx.pure.vector("u8", Array.from(encoder.encode(description))),
-            tx.pure.vector("u8", Array.from(encoder.encode(metadataUrl))),
+            tx.pure.string(name),
+            tx.pure.string(description),
+            tx.pure.string(metadataUrl),
           ],
         });
       }
 
-      const { bytes, signature } = await signTx({
+      const result = await signAndExecute({
         transaction: tx,
-      });
-
-      const result = await client.executeTransactionBlock({
-        transactionBlock: bytes,
-        signature,
-        options: { showEffects: true },
       });
 
       toast({

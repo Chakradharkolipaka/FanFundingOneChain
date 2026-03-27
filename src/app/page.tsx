@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSuiClient, useCurrentAccount } from "@mysten/dapp-kit";
+import { useSuiClient, useCurrentAccount } from "@onelabs/dapp-kit";
 import NFTCard from "@/components/NFTCard";
 import SkeletonCard from "@/components/SkeletonCard";
 import { PACKAGE_ID, REGISTRY_ID } from "@/constants";

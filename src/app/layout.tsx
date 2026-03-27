@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import "@mysten/dapp-kit/dist/index.css";
+import "@onelabs/dapp-kit/dist/index.css";
 import Providers from "./providers";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";

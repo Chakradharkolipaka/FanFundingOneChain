@@ -1,6 +1,6 @@
 "use client";
 
-import { ConnectButton } from "@mysten/dapp-kit";
+import { ConnectButton } from "@onelabs/dapp-kit";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 import { Home, PlusCircle } from "lucide-react";
