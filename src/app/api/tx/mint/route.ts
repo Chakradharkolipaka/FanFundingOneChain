@@ -9,11 +9,7 @@ const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID!;
 const REGISTRY_ID = process.env.NEXT_PUBLIC_REGISTRY_ID!;
 
 function getKeypair(): Ed25519Keypair {
-  const mnemonic = process.env.ONECHAIN_MNEMONIC;
-  if (mnemonic) {
-    return Ed25519Keypair.deriveKeypair(mnemonic);
-  }
-
+  // Prefer private key (deployer key that deployed the contract)
   const b64Key = process.env.ONECHAIN_PRIVATE_KEY;
   if (b64Key) {
     const raw = fromBase64(b64Key);
@@ -22,7 +18,12 @@ function getKeypair(): Ed25519Keypair {
     return Ed25519Keypair.fromSecretKey(secret);
   }
 
-  throw new Error("ONECHAIN_MNEMONIC or ONECHAIN_PRIVATE_KEY must be set");
+  const mnemonic = process.env.ONECHAIN_MNEMONIC;
+  if (mnemonic) {
+    return Ed25519Keypair.deriveKeypair(mnemonic);
+  }
+
+  throw new Error("ONECHAIN_MNEMONIC or ONECHAIN_PRIVATE_KEY must be set. Add them in Vercel Environment Variables.");
 }
 
 export async function POST(req: NextRequest) {

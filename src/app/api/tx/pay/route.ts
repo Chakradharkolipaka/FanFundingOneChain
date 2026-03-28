@@ -8,11 +8,6 @@ const RPC_URL = process.env.NEXT_PUBLIC_ONECHAIN_RPC_URL || "https://rpc-testnet
 const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID!;
 
 function getKeypair(): Ed25519Keypair {
-  const mnemonic = process.env.ONECHAIN_MNEMONIC;
-  if (mnemonic) {
-    return Ed25519Keypair.deriveKeypair(mnemonic);
-  }
-
   const b64Key = process.env.ONECHAIN_PRIVATE_KEY;
   if (b64Key) {
     const raw = fromBase64(b64Key);
@@ -20,7 +15,12 @@ function getKeypair(): Ed25519Keypair {
     return Ed25519Keypair.fromSecretKey(secret);
   }
 
-  throw new Error("ONECHAIN_MNEMONIC or ONECHAIN_PRIVATE_KEY must be set");
+  const mnemonic = process.env.ONECHAIN_MNEMONIC;
+  if (mnemonic) {
+    return Ed25519Keypair.deriveKeypair(mnemonic);
+  }
+
+  throw new Error("ONECHAIN_MNEMONIC or ONECHAIN_PRIVATE_KEY must be set. Add them in Vercel Environment Variables.");
 }
 
 export async function POST(req: NextRequest) {
