@@ -1,20 +1,16 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@onelabs/dapp-kit";
-import { Transaction } from "@onelabs/sui/transactions";
+import { useCurrentAccount } from "@onelabs/dapp-kit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, ImagePlus, Video, Loader2 } from "lucide-react";
-import { PACKAGE_ID, REGISTRY_ID } from "@/constants";
 
 export default function MintPage() {
   const account = useCurrentAccount();
-  const client = useSuiClient();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -104,37 +100,28 @@ export default function MintPage() {
       const { metadataUrl } = await uploadRes.json();
       setUploading(false);
 
-      // Step 2: Mint on-chain
+      // Step 2: Mint on-chain via server-side signing
       setMinting(true);
-      const tx = new Transaction();
 
-      if (mediaType === "video") {
-        const priceInMist = Math.floor(parseFloat(watchPrice || "0") * 1e9);
-        tx.moveCall({
-          target: `${PACKAGE_ID}::nft_donation::mint_video_nft`,
-          arguments: [
-            tx.object(REGISTRY_ID),
-            tx.pure.string(name),
-            tx.pure.string(description),
-            tx.pure.string(metadataUrl),
-            tx.pure.u64(priceInMist),
-          ],
-        });
-      } else {
-        tx.moveCall({
-          target: `${PACKAGE_ID}::nft_donation::mint_nft`,
-          arguments: [
-            tx.object(REGISTRY_ID),
-            tx.pure.string(name),
-            tx.pure.string(description),
-            tx.pure.string(metadataUrl),
-          ],
-        });
+      const mintRes = await fetch("/api/tx/mint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          description,
+          metadataUrl,
+          mediaType,
+          watchPrice: watchPrice || "0",
+          senderAddress: account.address,
+        }),
+      });
+
+      if (!mintRes.ok) {
+        const errData = await mintRes.json().catch(() => ({ error: "Mint failed" }));
+        throw new Error(errData.error || `Mint failed (${mintRes.status})`);
       }
 
-      const result = await signAndExecute({
-        transaction: tx,
-      });
+      const result = await mintRes.json();
 
       toast({
         title: "🎉 NFT Minted!",

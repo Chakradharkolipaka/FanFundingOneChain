@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from "@onelabs/dapp-kit";
-import { Transaction } from "@onelabs/sui/transactions";
+import { useCurrentAccount } from "@onelabs/dapp-kit";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,6 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Heart, Video, Eye, Loader2, ExternalLink } from "lucide-react";
 import Confetti from "react-confetti";
-import { PACKAGE_ID, REGISTRY_ID } from "@/constants";
 
 interface NFTCardProps {
   objectId: string;
@@ -52,8 +50,6 @@ export default function NFTCard({
   totalDonated,
 }: NFTCardProps) {
   const account = useCurrentAccount();
-  const client = useSuiClient();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const { toast } = useToast();
 
   const [donateAmount, setDonateAmount] = useState("");
@@ -88,22 +84,22 @@ export default function NFTCard({
       setDonating(true);
       const amountMist = Math.floor(amountOCT * 1e9);
 
-      const tx = new Transaction();
-
-      // Split coin for donation
-      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
-      tx.moveCall({
-        target: `${PACKAGE_ID}::nft_donation::donate`,
-        arguments: [
-          tx.object(REGISTRY_ID),
-          tx.object(objectId),
-          coin,
-        ],
+      const res = await fetch("/api/tx/donate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nftObjectId: objectId,
+          amountMist,
+          senderAddress: account.address,
+        }),
       });
 
-      const result = await signAndExecute({
-        transaction: tx,
-      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Donate failed" }));
+        throw new Error(errData.error || `Donate failed (${res.status})`);
+      }
+
+      const result = await res.json();
 
       toast({
         title: "🎉 Donation successful!",
@@ -142,20 +138,22 @@ export default function NFTCard({
     try {
       setPaying(true);
 
-      const tx = new Transaction();
-      const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(watchPrice)]);
-      tx.moveCall({
-        target: `${PACKAGE_ID}::pay_per_view::pay_to_watch`,
-        arguments: [
-          tx.object(objectId),
-          coin,
-          tx.object("0x6"), // Clock object
-        ],
+      const res = await fetch("/api/tx/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nftObjectId: objectId,
+          watchPrice,
+          senderAddress: account.address,
+        }),
       });
 
-      const result = await signAndExecute({
-        transaction: tx,
-      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: "Payment failed" }));
+        throw new Error(errData.error || `Payment failed (${res.status})`);
+      }
+
+      const result = await res.json();
 
       toast({
         title: "🎬 Access granted!",
