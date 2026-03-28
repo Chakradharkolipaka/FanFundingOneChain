@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useCurrentAccount } from "@onelabs/dapp-kit";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +50,6 @@ export default function NFTCard({
   totalDonated,
 }: NFTCardProps) {
   const account = useCurrentAccount();
-  const router = useRouter();
   const { toast } = useToast();
 
   const [donateAmount, setDonateAmount] = useState("");
@@ -157,23 +155,18 @@ export default function NFTCard({
 
       const result = await res.json();
 
-      // Store one-time session access — cleared on tab close or exit
+      // Write session access BEFORE navigating so the watch page can read it
       sessionStorage.setItem(
         `watch_access_${objectId}`,
         JSON.stringify({
           videoUrl: result.videoUrl,
           name: result.nftName || name,
-          expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours max session
+          expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2-hour session max
         })
       );
 
-      toast({
-        title: "✅ Payment confirmed!",
-        description: `Tx: ${result.digest.slice(0, 16)}... Redirecting...`,
-      });
-
-      // Navigate to fullscreen watch page
-      setTimeout(() => router.push(`/watch/${objectId}`), 800);
+      // Hard navigation — guarantees sessionStorage is committed before page loads
+      window.location.href = `/watch/${objectId}`;
     } catch (err: any) {
       console.error("Pay to watch failed:", err);
       const msg = err?.message || String(err) || "Something went wrong";
@@ -244,65 +237,93 @@ export default function NFTCard({
         </CardContent>
 
         <CardFooter className="p-4 pt-0 gap-2">
-          {/* Donate Button */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" size="sm" className="flex-1">
-                <Heart className="mr-1 h-4 w-4" />
-                Donate
+          {/* Video NFT: show only "Pay to Watch" button */}
+          {mediaType === "video" ? (
+            watchPrice > 0 ? (
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={handlePayToWatch}
+                disabled={paying}
+              >
+                {paying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing payment...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Pay to Watch · {(watchPrice / 1e9).toFixed(3)} OCT
+                  </>
+                )}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Donate to "{name}"</DialogTitle>
-                <DialogDescription>
-                  Support this creator by sending OCT to their NFT.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <Input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  placeholder="Amount in OCT"
-                  value={donateAmount}
-                  onChange={(e) => setDonateAmount(e.target.value)}
-                />
-              </div>
-              <DialogFooter>
-                <Button onClick={handleDonate} disabled={donating}>
-                  {donating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Donating...
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="mr-2 h-4 w-4" />
-                      Send Donation
-                    </>
-                  )}
+            ) : (
+              /* Free video — watch directly without payment */
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  sessionStorage.setItem(
+                    `watch_access_${objectId}`,
+                    JSON.stringify({
+                      videoUrl: imageUrl,
+                      name,
+                      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+                    })
+                  );
+                  window.location.href = `/watch/${objectId}`;
+                }}
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                Watch Free
+              </Button>
+            )
+          ) : (
+            /* Image NFT: Donate button only */
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="default" size="sm" className="w-full">
+                  <Heart className="mr-1 h-4 w-4" />
+                  Donate
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Pay to Watch (video only) */}
-          {mediaType === "video" && watchPrice > 0 && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex-1"
-              onClick={handlePayToWatch}
-              disabled={paying}
-            >
-              {paying ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              ) : (
-                <Eye className="mr-1 h-4 w-4" />
-              )}
-              {paying ? "Processing..." : `Watch · ${(watchPrice / 1e9).toFixed(3)} OCT`}
-            </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Donate to "{name}"</DialogTitle>
+                  <DialogDescription>
+                    Support this creator by sending OCT to their NFT.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    placeholder="Amount in OCT"
+                    value={donateAmount}
+                    onChange={(e) => setDonateAmount(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleDonate} disabled={donating}>
+                    {donating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Donating...
+                      </>
+                    ) : (
+                      <>
+                        <Heart className="mr-2 h-4 w-4" />
+                        Send Donation
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </CardFooter>
       </Card>

@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Loader2, Lock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function WatchPage() {
   const params = useParams();
-  const router = useRouter();
   const nftId = params.nftId as string;
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -17,7 +16,6 @@ export default function WatchPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check sessionStorage for access token (cleared when tab closes)
     const accessKey = `watch_access_${nftId}`;
     const storedData = sessionStorage.getItem(accessKey);
 
@@ -30,7 +28,6 @@ export default function WatchPage() {
     try {
       const { videoUrl: url, name, expiresAt } = JSON.parse(storedData);
 
-      // Token expires after 2 hours of inactivity
       if (Date.now() > expiresAt) {
         sessionStorage.removeItem(accessKey);
         setDenied(true);
@@ -45,9 +42,11 @@ export default function WatchPage() {
       sessionStorage.removeItem(accessKey);
       setDenied(true);
       setLoading(false);
+      return;
     }
 
-    // Clear access when page unloads (back button, tab close, navigate away)
+    // Only clear when the browser tab actually closes or navigates away —
+    // NOT on React component unmount (would fire on strict-mode double render)
     const clearOnExit = () => sessionStorage.removeItem(accessKey);
     window.addEventListener("beforeunload", clearOnExit);
     window.addEventListener("pagehide", clearOnExit);
@@ -55,8 +54,6 @@ export default function WatchPage() {
     return () => {
       window.removeEventListener("beforeunload", clearOnExit);
       window.removeEventListener("pagehide", clearOnExit);
-      // Also clear when React unmounts (navigation within app)
-      sessionStorage.removeItem(accessKey);
     };
   }, [nftId]);
 
@@ -78,9 +75,8 @@ export default function WatchPage() {
   }, []);
 
   const handleExit = () => {
-    // Explicitly clear access on manual exit too
     sessionStorage.removeItem(`watch_access_${nftId}`);
-    router.push("/");
+    window.location.href = "/"; // hard nav back, ensures no back-button replay
   };
 
   if (loading) {
@@ -99,7 +95,7 @@ export default function WatchPage() {
         <p className="text-muted-foreground text-center max-w-sm">
           This content requires payment. Return to the home page and pay to watch.
         </p>
-        <Button variant="outline" onClick={() => router.push("/")}>
+        <Button variant="outline" onClick={() => { window.location.href = "/"; }}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Button>
