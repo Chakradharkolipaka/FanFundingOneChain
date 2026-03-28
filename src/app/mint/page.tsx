@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, ImagePlus, Video, Loader2 } from "lucide-react";
+import { Upload, Video, Loader2 } from "lucide-react";
 
 export default function MintPage() {
   const account = useCurrentAccount();
@@ -17,7 +17,6 @@ export default function MintPage() {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<"image" | "video">("image");
   const [watchPrice, setWatchPrice] = useState("");
   const [uploading, setUploading] = useState(false);
   const [minting, setMinting] = useState(false);
@@ -26,35 +25,32 @@ export default function MintPage() {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
-    setFile(selected);
 
-    // Detect media type from file
-    if (selected.type.startsWith("video/")) {
-      setMediaType("video");
-    } else {
-      setMediaType("image");
+    // Only allow video files
+    if (!selected.type.startsWith("video/")) {
+      toast({ title: "Only video files (.mp4, .webm) are supported", variant: "destructive" });
+      return;
     }
 
-    // Create preview
+    setFile(selected);
     const url = URL.createObjectURL(selected);
     setPreview(url);
-  }, []);
+  }, [toast]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const dropped = e.dataTransfer.files?.[0];
     if (!dropped) return;
-    setFile(dropped);
 
-    if (dropped.type.startsWith("video/")) {
-      setMediaType("video");
-    } else {
-      setMediaType("image");
+    if (!dropped.type.startsWith("video/")) {
+      toast({ title: "Only video files (.mp4, .webm) are supported", variant: "destructive" });
+      return;
     }
 
+    setFile(dropped);
     const url = URL.createObjectURL(dropped);
     setPreview(url);
-  }, []);
+  }, [toast]);
 
   async function handleMint() {
     if (!account) {
@@ -110,7 +106,7 @@ export default function MintPage() {
           name,
           description,
           metadataUrl,
-          mediaType,
+          mediaType: "video", // always video
           watchPrice: watchPrice || "0",
           senderAddress: account.address,
         }),
@@ -124,7 +120,7 @@ export default function MintPage() {
       const result = await mintRes.json();
 
       toast({
-        title: "🎉 NFT Minted!",
+        title: "🎉 Video NFT Minted!",
         description: `Transaction: ${result.digest.slice(0, 16)}...`,
       });
 
@@ -134,7 +130,6 @@ export default function MintPage() {
       setFile(null);
       setPreview(null);
       setWatchPrice("");
-      setMediaType("image");
     } catch (err: any) {
       console.error("Mint failed:", err);
       const msg = err?.message || String(err) || "Something went wrong";
@@ -162,69 +157,51 @@ export default function MintPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ImagePlus className="h-6 w-6" />
-            Mint New NFT
+            <Video className="h-6 w-6 text-purple-500" />
+            Mint Video NFT
           </CardTitle>
+          <p className="text-sm text-muted-foreground">Upload an .mp4 video and set a pay-per-view price</p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* File Upload */}
+          {/* File Upload — video only */}
           <div
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            className="border-2 border-dashed border-purple-400/50 rounded-lg p-8 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-500/5 transition-colors"
           >
             {preview ? (
               <div className="space-y-2">
-                {mediaType === "video" ? (
-                  <video
-                    src={preview}
-                    className="max-h-64 mx-auto rounded-lg"
-                    controls
-                  />
-                ) : (
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="max-h-64 mx-auto rounded-lg object-contain"
-                  />
-                )}
+                <video
+                  src={preview}
+                  className="max-h-56 mx-auto rounded-lg"
+                  controls
+                  onClick={(e) => e.stopPropagation()}
+                />
                 <p className="text-sm text-muted-foreground">{file?.name}</p>
+                <p className="text-xs text-purple-400">Click to change file</p>
               </div>
             ) : (
               <div className="space-y-2 text-muted-foreground">
-                <Upload className="h-10 w-10 mx-auto" />
-                <p>Drag & drop an image or video, or click to browse</p>
-                <p className="text-xs">Supports JPG, PNG, GIF, MP4, WebM</p>
+                <Video className="h-10 w-10 mx-auto text-purple-400" />
+                <p className="font-medium">Drag & drop your video here</p>
+                <p className="text-xs">Supports MP4, WebM · Max 4MB</p>
               </div>
             )}
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,video/*"
+              accept="video/*"
               onChange={handleFileChange}
               className="hidden"
             />
           </div>
 
-          {/* Media Type Badge */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Type:</span>
-            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              mediaType === "video"
-                ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-            }`}>
-              {mediaType === "video" ? <Video className="h-3 w-3" /> : <ImagePlus className="h-3 w-3" />}
-              {mediaType === "video" ? "Video NFT" : "Image NFT"}
-            </span>
-          </div>
-
           {/* Name */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Name</label>
+            <label className="text-sm font-medium">Title</label>
             <Input
-              placeholder="My Awesome NFT"
+              placeholder="My Exclusive Video"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
@@ -234,30 +211,28 @@ export default function MintPage() {
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea
-              placeholder="Describe your creation..."
+              placeholder="Describe your content..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
           </div>
 
-          {/* Watch Price (video only) */}
-          {mediaType === "video" && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Watch Price (OCT)</label>
-              <Input
-                type="number"
-                step="0.001"
-                min="0"
-                placeholder="0.01"
-                value={watchPrice}
-                onChange={(e) => setWatchPrice(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Set a price for pay-per-view. Leave 0 for free viewing.
-              </p>
-            </div>
-          )}
+          {/* Watch Price */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Pay-Per-View Price (OCT)</label>
+            <Input
+              type="number"
+              step="0.001"
+              min="0"
+              placeholder="e.g. 0.1"
+              value={watchPrice}
+              onChange={(e) => setWatchPrice(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Fans pay this amount in OCT each time they want to watch. Set 0 for free.
+            </p>
+          </div>
 
           {/* Submit */}
           <Button
@@ -279,7 +254,7 @@ export default function MintPage() {
             ) : !account ? (
               "Connect Wallet to Mint"
             ) : (
-              "🚀 Mint NFT"
+              "🚀 Mint Video NFT"
             )}
           </Button>
         </CardContent>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCurrentAccount } from "@onelabs/dapp-kit";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Heart, Video, Eye, Loader2, ExternalLink } from "lucide-react";
+import { Heart, Video, Eye, Loader2 } from "lucide-react";
 import Confetti from "react-confetti";
 
 interface NFTCardProps {
@@ -50,6 +51,7 @@ export default function NFTCard({
   totalDonated,
 }: NFTCardProps) {
   const account = useCurrentAccount();
+  const router = useRouter();
   const { toast } = useToast();
 
   const [donateAmount, setDonateAmount] = useState("");
@@ -155,16 +157,29 @@ export default function NFTCard({
 
       const result = await res.json();
 
+      // Store one-time session access — cleared on tab close or exit
+      sessionStorage.setItem(
+        `watch_access_${objectId}`,
+        JSON.stringify({
+          videoUrl: result.videoUrl,
+          name: result.nftName || name,
+          expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours max session
+        })
+      );
+
       toast({
-        title: "🎬 Access granted!",
-        description: `You can now watch this video. Tx: ${result.digest.slice(0, 16)}...`,
+        title: "✅ Payment confirmed!",
+        description: `Tx: ${result.digest.slice(0, 16)}... Redirecting...`,
       });
+
+      // Navigate to fullscreen watch page
+      setTimeout(() => router.push(`/watch/${objectId}`), 800);
     } catch (err: any) {
       console.error("Pay to watch failed:", err);
       const msg = err?.message || String(err) || "Something went wrong";
       let userMsg = msg;
       if (msg.includes("Rejected") || msg.includes("rejected")) {
-        userMsg = "Transaction was rejected in your wallet.";
+        userMsg = "Transaction was rejected.";
       } else if (msg.includes("insufficient") || msg.includes("InsufficientGas") || msg.includes("No valid gas")) {
         userMsg = "Not enough OCT. Get testnet tokens from the faucet.";
       }
@@ -286,7 +301,7 @@ export default function NFTCard({
               ) : (
                 <Eye className="mr-1 h-4 w-4" />
               )}
-              Watch
+              {paying ? "Processing..." : `Watch · ${(watchPrice / 1e9).toFixed(3)} OCT`}
             </Button>
           )}
         </CardFooter>

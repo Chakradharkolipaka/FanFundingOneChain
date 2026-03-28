@@ -7,6 +7,15 @@ import { fromBase64 } from "@onelabs/sui/utils";
 const RPC_URL = process.env.NEXT_PUBLIC_ONECHAIN_RPC_URL || "https://rpc-testnet.onelabs.cc:443";
 const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID!;
 
+const IPFS_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
+
+function resolveIpfsUrl(uri: string): string {
+  if (!uri) return "";
+  if (uri.startsWith("http")) return uri;
+  const cid = uri.replace("ipfs://", "");
+  return `${IPFS_GATEWAY}${cid}`;
+}
+
 function getKeypair(): Ed25519Keypair {
   const b64Key = process.env.ONECHAIN_PRIVATE_KEY;
   if (b64Key) {
@@ -35,8 +44,30 @@ export async function POST(req: NextRequest) {
     const client = new SuiClient({ url: RPC_URL });
     const keypair = getKeypair();
 
-    const tx = new Transaction();
+    // Fetch NFT object to get the token_uri (video URL) and name
+    const nftObj = await client.getObject({
+      id: nftObjectId,
+      options: { showContent: true },
+    });
+    const fields = (nftObj.data?.content as any)?.fields;
+    const tokenUri: string = fields?.token_uri || "";
+    const nftName: string = fields?.name || "Video NFT";
 
+    // Parse metadataUrl → fetch metadata JSON → get animation_url (actual .mp4)
+    let videoUrl = resolveIpfsUrl(tokenUri);
+    try {
+      const metaRes = await fetch(videoUrl, { signal: AbortSignal.timeout(8000) });
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        // Pinata metadata format: { animation_url, image, name, description }
+        const rawVideo = meta.animation_url || meta.video_url || meta.media_url || "";
+        if (rawVideo) videoUrl = resolveIpfsUrl(rawVideo);
+      }
+    } catch {
+      // If metadata fetch fails, use the tokenUri directly as video url
+    }
+
+    const tx = new Transaction();
     const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(watchPrice)]);
     tx.moveCall({
       target: `${PACKAGE_ID}::pay_per_view::pay_to_watch`,
@@ -56,6 +87,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       digest: result.digest,
+      videoUrl,
+      nftName,
     });
   } catch (error: any) {
     console.error("Pay-to-watch API error:", error);
