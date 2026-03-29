@@ -24,7 +24,8 @@ interface NFTCardProps {
   tokenId: number;
   name: string;
   description: string;
-  imageUrl: string;
+  imageUrl: string;     // resolved gateway URL for display
+  tokenUri: string;     // raw on-chain IPFS URI (used as videoHint)
   mediaType: string;
   watchPrice: number;
   creator: string;
@@ -44,6 +45,7 @@ export default function NFTCard({
   name,
   description,
   imageUrl,
+  tokenUri,
   mediaType,
   watchPrice,
   creator,
@@ -145,7 +147,7 @@ export default function NFTCard({
           nftObjectId: objectId,
           watchPrice,
           senderAddress: account.address,
-          videoHint: imageUrl, // resolved IPFS URL of tokenUri — used as fallback video URL
+          videoHint: tokenUri, // raw on-chain IPFS URI — pay route already has tokenUri, but this helps if fetch fails
         }),
       });
 

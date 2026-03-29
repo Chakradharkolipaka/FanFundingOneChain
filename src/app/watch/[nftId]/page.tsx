@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Lock, ArrowLeft } from "lucide-react";
+import { Loader2, Lock, ArrowLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function WatchPage() {
@@ -13,11 +13,14 @@ export default function WatchPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [nftName, setNftName] = useState<string>("");
   const [denied, setDenied] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const accessKey = `watch_access_${nftId}`;
     const storedData = sessionStorage.getItem(accessKey);
+
+    console.log("[watch] nftId:", nftId, "storedData:", storedData ? "found" : "missing");
 
     if (!storedData) {
       setDenied(true);
@@ -42,9 +45,13 @@ export default function WatchPage() {
       return;
     }
 
+    console.log("[watch] parsed videoUrl:", parsed.videoUrl, "name:", parsed.name);
+
     if (!parsed.videoUrl) {
-      sessionStorage.removeItem(accessKey);
-      setDenied(true);
+      // Payment succeeded but video URL couldn't be resolved — don't show "Access Required"
+      // (that would be confusing after successful payment), show a video error instead
+      setVideoError(true);
+      setNftName(parsed.name || "Video NFT");
       setLoading(false);
       return;
     }
@@ -95,6 +102,7 @@ export default function WatchPage() {
     );
   }
 
+  // No session at all — truly not paid
   if (denied) {
     return (
       <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-6 text-white">
@@ -104,6 +112,23 @@ export default function WatchPage() {
           This content requires payment. Return to the home page and pay to watch.
         </p>
         <Button variant="outline" onClick={() => { window.location.href = "/"; }}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
+      </div>
+    );
+  }
+
+  // Payment went through but video URL couldn't be resolved
+  if (videoError) {
+    return (
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-6 text-white">
+        <AlertTriangle className="h-16 w-16 text-orange-400" />
+        <h1 className="text-2xl font-bold">Video Unavailable</h1>
+        <p className="text-muted-foreground text-center max-w-sm">
+          Your payment was successful but the video URL could not be resolved. Please contact the creator.
+        </p>
+        <Button variant="outline" onClick={handleExit}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Button>
@@ -147,8 +172,12 @@ export default function WatchPage() {
           controlsList="nodownload nofullscreen noremoteplayback"
           disablePictureInPicture
           onContextMenu={handleContextMenu}
+          onError={(e) => {
+            console.error("[watch] Video load error for URL:", videoUrl, e);
+          }}
         />
       </div>
     </div>
   );
 }
+

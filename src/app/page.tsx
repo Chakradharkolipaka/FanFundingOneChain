@@ -11,7 +11,7 @@ interface NFTData {
   tokenId: number;
   name: string;
   description: string;
-  tokenUri: string;
+  tokenUri: string; // raw on-chain IPFS URI (ipfs://... or https://...)
   mediaType: string;
   watchPrice: number;
   creator: string;
@@ -194,6 +194,7 @@ export default function HomePage() {
                 name={nft.name}
                 description={nft.description}
                 imageUrl={resolveIpfsUrl(nft.tokenUri)}
+                tokenUri={nft.tokenUri}
                 mediaType={nft.mediaType}
                 watchPrice={nft.watchPrice}
                 creator={nft.creator}
