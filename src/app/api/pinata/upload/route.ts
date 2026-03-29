@@ -69,7 +69,19 @@ export async function POST(req: Request) {
     const fileJson = await fileRes.json();
     const imageUrl = `https://gateway.pinata.cloud/ipfs/${fileJson.IpfsHash}`;
 
+    // Detect media type from file mime type
+    const isVideo = file.type.startsWith("video/");
+
     // Upload metadata to Pinata
+    // For videos: include animation_url so the pay route can extract the real video URL
+    // For images: include image field only
+    const pinataContent: Record<string, string> = {
+      name,
+      description,
+      image: isVideo ? "" : imageUrl,       // thumbnail or empty for video
+      ...(isVideo ? { animation_url: imageUrl } : {}),
+    };
+
     const metaRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
       method: "POST",
       headers: {
@@ -77,11 +89,7 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${jwt}`,
       },
       body: JSON.stringify({
-        pinataContent: {
-          name,
-          description,
-          image: imageUrl,
-        },
+        pinataContent,
         pinataMetadata: { name: `${name}-metadata` },
       }),
     });

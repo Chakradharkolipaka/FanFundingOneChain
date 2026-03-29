@@ -145,6 +145,7 @@ export default function NFTCard({
           nftObjectId: objectId,
           watchPrice,
           senderAddress: account.address,
+          videoHint: imageUrl, // resolved IPFS URL of tokenUri — used as fallback video URL
         }),
       });
 

@@ -35,9 +35,9 @@ function getKeypair(): Ed25519Keypair {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { nftObjectId, watchPrice, senderAddress } = body;
+    const { nftObjectId, watchPrice, senderAddress, videoHint } = body;
 
-    if (!nftObjectId || !watchPrice || !senderAddress) {
+    if (!nftObjectId || watchPrice == null || !senderAddress) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -58,13 +58,43 @@ export async function POST(req: NextRequest) {
     try {
       const metaRes = await fetch(videoUrl, { signal: AbortSignal.timeout(8000) });
       if (metaRes.ok) {
-        const meta = await metaRes.json();
-        // Pinata metadata format: { animation_url, image, name, description }
-        const rawVideo = meta.animation_url || meta.video_url || meta.media_url || "";
-        if (rawVideo) videoUrl = resolveIpfsUrl(rawVideo);
+        const contentType = metaRes.headers.get("content-type") || "";
+        if (contentType.includes("application/json") || contentType.includes("text/plain")) {
+          const meta = await metaRes.json();
+          // Try animation_url first (video metadata), then image (legacy), then direct video fields
+          const rawVideo =
+            meta.animation_url ||
+            meta.video_url ||
+            meta.media_url ||
+            // For old NFTs minted before the animation_url fix: image field holds the video URL
+            (meta.image && (meta.image.endsWith(".mp4") || meta.image.endsWith(".webm") || meta.image.includes("ipfs"))
+              ? meta.image
+              : "") ||
+            "";
+          if (rawVideo) videoUrl = resolveIpfsUrl(rawVideo);
+        }
+        // If content-type is video/* — tokenUri IS the video directly, keep videoUrl as-is
       }
     } catch {
       // If metadata fetch fails, use the tokenUri directly as video url
+    }
+
+    // Last resort: if videoUrl still points to a JSON/metadata URL (not a video),
+    // use the videoHint from the frontend (the resolved tokenUri which may already be the video)
+    if (
+      videoHint &&
+      (videoUrl === resolveIpfsUrl(tokenUri)) // unchanged from initial — means metadata parse didn't find a video
+    ) {
+      // Check if the hint looks like a direct video URL
+      const hint = String(videoHint);
+      if (
+        hint.includes(".mp4") ||
+        hint.includes(".webm") ||
+        hint.includes(".mov") ||
+        hint.includes("ipfs") // any IPFS url is a better guess than the metadata JSON
+      ) {
+        videoUrl = hint;
+      }
     }
 
     const tx = new Transaction();

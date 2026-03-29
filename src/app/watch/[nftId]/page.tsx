@@ -35,6 +35,15 @@ export default function WatchPage() {
         return;
       }
 
+      if (!url) {
+        // Payment succeeded but video URL couldn't be resolved — still grant access
+        // but show a helpful message via denied screen (edge case for old NFTs)
+        sessionStorage.removeItem(accessKey);
+        setDenied(true);
+        setLoading(false);
+        return;
+      }
+
       setVideoUrl(url);
       setNftName(name);
       setLoading(false);
