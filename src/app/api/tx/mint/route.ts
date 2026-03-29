@@ -71,6 +71,14 @@ export async function POST(req: NextRequest) {
       options: { showEffects: true, showObjectChanges: true },
     });
 
+    // Verify on-chain success
+    const status = result.effects?.status?.status;
+    if (status !== "success") {
+      const errMsg = result.effects?.status?.error || "Mint transaction failed on-chain";
+      console.error("mint tx failed:", errMsg, "digest:", result.digest);
+      return NextResponse.json({ error: errMsg }, { status: 500 });
+    }
+
     return NextResponse.json({
       success: true,
       digest: result.digest,
