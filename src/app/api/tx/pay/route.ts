@@ -114,6 +114,16 @@ export async function POST(req: NextRequest) {
       options: { showEffects: true },
     });
 
+    // Verify tx succeeded on-chain
+    const status = result.effects?.status?.status;
+    if (status !== "success") {
+      const errMsg = result.effects?.status?.error || "Transaction failed on-chain";
+      console.error("pay_to_watch tx failed:", errMsg, "digest:", result.digest);
+      return NextResponse.json({ error: errMsg }, { status: 500 });
+    }
+
+    console.log("pay_to_watch success, digest:", result.digest, "videoUrl:", videoUrl);
+
     return NextResponse.json({
       success: true,
       digest: result.digest,

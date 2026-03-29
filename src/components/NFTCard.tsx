@@ -155,6 +155,9 @@ export default function NFTCard({
       }
 
       const result = await res.json();
+      console.log("[pay] API success, videoUrl:", result.videoUrl, "digest:", result.digest);
+
+      const watchUrl = `/watch/${objectId}`;
 
       // Write session access BEFORE navigating so the watch page can read it
       sessionStorage.setItem(
@@ -166,16 +169,25 @@ export default function NFTCard({
         })
       );
 
-      // Hard navigation — guarantees sessionStorage is committed before page loads
-      window.location.href = `/watch/${objectId}`;
+      // Verify it was written
+      console.log("[pay] sessionStorage written, navigating to", watchUrl);
+
+      // Hard navigate — replace current history entry so back button goes home
+      window.location.replace(watchUrl);
     } catch (err: any) {
-      console.error("Pay to watch failed:", err);
+      console.error("[pay] Payment failed:", err);
       const msg = err?.message || String(err) || "Something went wrong";
       let userMsg = msg;
       if (msg.includes("Rejected") || msg.includes("rejected")) {
         userMsg = "Transaction was rejected.";
       } else if (msg.includes("insufficient") || msg.includes("InsufficientGas") || msg.includes("No valid gas")) {
         userMsg = "Not enough OCT. Get testnet tokens from the faucet.";
+      } else if (msg.includes("E_FREE_CONTENT") || msg.includes("102")) {
+        userMsg = "This NFT is free — use Watch Free instead.";
+      } else if (msg.includes("E_INSUFFICIENT_PAYMENT") || msg.includes("101")) {
+        userMsg = "Payment amount is too low for this NFT.";
+      } else if (msg.includes("E_NOT_VIDEO") || msg.includes("100")) {
+        userMsg = "This NFT is not a video NFT.";
       }
       toast({
         title: "Payment failed",

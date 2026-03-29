@@ -25,34 +25,33 @@ export default function WatchPage() {
       return;
     }
 
+    let parsed: { videoUrl: string; name: string; expiresAt: number } | null = null;
     try {
-      const { videoUrl: url, name, expiresAt } = JSON.parse(storedData);
-
-      if (Date.now() > expiresAt) {
-        sessionStorage.removeItem(accessKey);
-        setDenied(true);
-        setLoading(false);
-        return;
-      }
-
-      if (!url) {
-        // Payment succeeded but video URL couldn't be resolved — still grant access
-        // but show a helpful message via denied screen (edge case for old NFTs)
-        sessionStorage.removeItem(accessKey);
-        setDenied(true);
-        setLoading(false);
-        return;
-      }
-
-      setVideoUrl(url);
-      setNftName(name);
-      setLoading(false);
+      parsed = JSON.parse(storedData);
     } catch {
       sessionStorage.removeItem(accessKey);
       setDenied(true);
       setLoading(false);
       return;
     }
+
+    if (!parsed || Date.now() > parsed.expiresAt) {
+      sessionStorage.removeItem(accessKey);
+      setDenied(true);
+      setLoading(false);
+      return;
+    }
+
+    if (!parsed.videoUrl) {
+      sessionStorage.removeItem(accessKey);
+      setDenied(true);
+      setLoading(false);
+      return;
+    }
+
+    setVideoUrl(parsed.videoUrl);
+    setNftName(parsed.name || "Video NFT");
+    setLoading(false);
 
     // Only clear when the browser tab actually closes or navigates away —
     // NOT on React component unmount (would fire on strict-mode double render)
